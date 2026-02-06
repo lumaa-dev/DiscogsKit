@@ -254,17 +254,22 @@ public final class Discogs {
 
 	/// Requests the user to authenticate using their Discogs account, through [discogs.com](https://discogs.com/), using Apple's [Authentication Services](https://developer.apple.com/documentation/authenticationservices) API.
 	public func authorize(using webAuthenticationSession: WebAuthenticationSession, callbackURLScheme: String) async throws -> URL {
-		var req: URLRequest = try self.makeRequest(for: Oauths.requestToken, using: .post)
-		req = self.timedRequest(using: req, callback: callbackURLScheme)
-
-		let data: Data = try await self.makeCall(using: req).0
-
-		guard let responseString: String = String(data: data, encoding: .utf8), let token: String = URLComponents(string: "?\(responseString)")?.queryItems?.first(where: { $0.name == "oauth_token" })?.value else { throw DiscogsError.badResponse }
+		guard let reqToken: String = try await self.requestToken(callbackURLScheme: callbackURLScheme), let token: String = URLComponents(string: "?\(reqToken)")?.queryItems?.first(where: { $0.name == "oauth_token" })?.value else {
+			throw DiscogsError.badResponse
+		}
 
 		guard var authorizeURL: URL = Oauths.authorize.url else { throw DiscogsError.badURL }
 		authorizeURL.append(queryItems: [.init(name: "oauth_token", value: token)])
 
 		return try await webAuthenticationSession.authenticate(using: authorizeURL, callbackURLScheme: callbackURLScheme)
+	}
+
+	public func requestToken(callbackURLScheme: String) async throws -> String? {
+		var req: URLRequest = try self.makeRequest(for: Oauths.requestToken, using: .post)
+		req = self.timedRequest(using: req, callback: callbackURLScheme)
+
+		let data: Data = try await self.makeCall(using: req).0
+		return String(data: data, encoding: .utf8)
 	}
 
 	/// Creates a "timed" request (usable with ``Oauths/requestToken`` for example)
