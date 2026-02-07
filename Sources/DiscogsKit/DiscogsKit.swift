@@ -277,12 +277,15 @@ public final class Discogs {
 		return String(data: data, encoding: .utf8)
 	}
 
-	public func accessToken(requestToken: String) async throws -> String? {
-		var req: URLRequest = try self.makeRequest(for: Oauths.accessToken)
+	public func accessToken(requestToken: String) async throws -> Data {
+		var req: URLRequest = try self.makeRequest(for: Oauths.accessToken, using: .post)
 		req = self.timedRequest(using: req)
+		if var auth: String = req.value(forHTTPHeaderField: "Authorization") {
+			auth += ",oauth_token=\"\(requestToken)\""
+			req.setValue(auth, forHTTPHeaderField: "Authorization")
+		}
 
-		let data: Data = try await self.makeCall(using: req).0
-		return String(data: data, encoding: .utf8)
+		return try await self.makeCall(using: req).0
 	}
 
 	/// Creates a "timed" request (usable with ``Oauths/requestToken`` for example)
