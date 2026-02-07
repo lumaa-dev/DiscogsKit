@@ -253,14 +253,20 @@ public final class Discogs {
 
 	/// Requests the user to authenticate using their Discogs account, through [discogs.com](https://discogs.com/), using Apple's [Authentication Services](https://developer.apple.com/documentation/authenticationservices) API.
 	public func authorize(using webAuthenticationSession: WebAuthenticationSession, callbackURLScheme: String) async throws -> URL {
-		guard let reqToken: String = try await self.requestToken(callbackURLScheme: callbackURLScheme + "://"), let token: String = URLComponents(string: "?\(reqToken)")?.queryItems?.first(where: { $0.name == "oauth_token" })?.value else {
+		guard let reqToken: String = try await self.requestToken(callbackURLScheme: callbackURLScheme), let token: String = URLComponents(string: "?\(reqToken)")?.queryItems?.first(where: { $0.name == "oauth_token" })?.value else {
 			throw DiscogsError.badResponse
 		}
 
 		guard var authorizeURL: URL = Oauths.authorize.url else { throw DiscogsError.badURL }
 		authorizeURL.append(queryItems: [.init(name: "oauth_token", value: token)])
 
-		return try await webAuthenticationSession.authenticate(using: authorizeURL, callbackURLScheme: callbackURLScheme) // cannot have ://
+		var newURL: String = callbackURLScheme
+		if !callbackURLScheme.hasPrefix("http") {
+			newURL = newURL.replacing(/:\/\/.+/, with: "")
+		}
+
+		return try await webAuthenticationSession.authenticate(using: authorizeURL, callback: newURL)
+
 	}
 
 	public func requestToken(callbackURLScheme: String) async throws -> String? {
@@ -313,4 +319,19 @@ public final class Discogs {
     public struct EmptyBody: Encodable {
         public init () {}
     }
+}
+
+private extension WebAuthenticationSession {
+	func authenticate(using url: URL, callback: String) async throws -> URL {
+		if #available(iOS 17.4, macOS 14.4, watchOS 10.4, tvOS 17.4, visionOS 1.0, *) {
+			return try await self.authenticate(
+				using: url,
+				callback: .customScheme(callback),
+				preferredBrowserSession: .ephemeral,
+				additionalHeaderFields: [:]
+			)
+		} else {
+			return try await self.authenticate(using: url, callbackURLScheme: callback, preferredBrowserSession: .ephemeral)
+		}
+	}
 }
