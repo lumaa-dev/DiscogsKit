@@ -272,6 +272,11 @@ public final class Discogs {
 	public func requestToken(callbackURLScheme: String) async throws -> String? {
 		var req: URLRequest = try self.makeRequest(for: Oauths.requestToken)
 		req = self.timedRequest(using: req, callback: callbackURLScheme)
+		if var auth: String = req.value(forHTTPHeaderField: "Authorization") {
+			auth += ",oauth_signature=\"\(self.consumerSecret!)&\""
+			req.setValue(auth, forHTTPHeaderField: "Authorization")
+			print("New auth: \(auth)")
+		}
 
 		let data: Data = try await self.makeCall(using: req).0
 		return String(data: data, encoding: .utf8)
@@ -281,7 +286,7 @@ public final class Discogs {
 		var req: URLRequest = try self.makeRequest(for: Oauths.accessToken, using: .post)
 		req = self.timedRequest(using: req)
 		if var auth: String = req.value(forHTTPHeaderField: "Authorization") {
-			auth += ",oauth_token=\"\(oauthToken)\",oauth_verifier=\"\(verifierToken)\""
+			auth += ",oauth_token=\"\(oauthToken)\",oauth_verifier=\"\(verifierToken)\",oauth_signature=\"\(self.consumerSecret!)&\(self.consumerSecret!)\""
 			req.setValue(auth, forHTTPHeaderField: "Authorization")
 			print("New auth: \(auth)")
 		}
@@ -294,7 +299,7 @@ public final class Discogs {
 	/// Example here: [Documentation](https://www.discogs.com/developers#page:authentication,header:authentication-access-token-url)
 	/// - Returns: The "timed" request
 	private func timedRequest(using request: URLRequest, callback: String? = nil) -> URLRequest {
-		var authHeader: String = "OAuth oauth_consumer_key=\"\(self.consumerKey!)\",oauth_nonce=\"\(UUID().uuidString)\",oauth_signature=\"\(self.consumerSecret!)&\",oauth_signature_method=\"PLAINTEXT\",oauth_timestamp=\"\(Int(Date.now.timeIntervalSince1970))\",oauth_version=\"1.0\""
+		var authHeader: String = "OAuth oauth_consumer_key=\"\(self.consumerKey!)\",oauth_nonce=\"\(UUID().uuidString)\",oauth_signature_method=\"PLAINTEXT\",oauth_timestamp=\"\(Int(Date.now.timeIntervalSince1970))\",oauth_version=\"1.0\""
 		if let callback {
 			authHeader += ",oauth_callback=\"\(callback)\""
 		}
