@@ -267,7 +267,7 @@ public final class Discogs {
 			newURL = newURL.replacing(/:\/\/.+/, with: "")
 		}
 
-		if let secret: String = URLComponents(string: "?\(reqToken)")?.queryItems?.first(where: { $0.name == "oauth_token" })?.value {
+		if let secret: String = URLComponents(string: "?\(reqToken)")?.queryItems?.first(where: { $0.name == "oauth_token_secret" })?.value {
 			self.secretToken = secret
 		}
 
