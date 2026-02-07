@@ -277,11 +277,11 @@ public final class Discogs {
 		return String(data: data, encoding: .utf8)
 	}
 
-	public func accessToken(requestToken: String) async throws -> Data {
+	public func accessToken(oauthToken: String, verifierToken: String) async throws -> Data {
 		var req: URLRequest = try self.makeRequest(for: Oauths.accessToken, using: .post)
 		req = self.timedRequest(using: req)
 		if var auth: String = req.value(forHTTPHeaderField: "Authorization") {
-			auth += ",oauth_token=\"\(requestToken)\""
+			auth += ",oauth_token=\"\(oauthToken)\",oauth_verifier=\"\(verifierToken)\""
 			req.setValue(auth, forHTTPHeaderField: "Authorization")
 		}
 
@@ -292,13 +292,10 @@ public final class Discogs {
 	///
 	/// Example here: [Documentation](https://www.discogs.com/developers#page:authentication,header:authentication-access-token-url)
 	/// - Returns: The "timed" request
-	private func timedRequest(using request: URLRequest, callback: String? = nil, verifier: String? = nil) -> URLRequest {
+	private func timedRequest(using request: URLRequest, callback: String? = nil) -> URLRequest {
 		var authHeader: String = "OAuth oauth_consumer_key=\"\(self.consumerKey!)\",oauth_nonce=\"\(UUID().uuidString)\",oauth_signature=\"\(self.consumerSecret!)&\",oauth_signature_method=\"PLAINTEXT\",oauth_timestamp=\"\(Int(Date.now.timeIntervalSince1970))\",oauth_version=\"1.0\""
 		if let callback {
 			authHeader += ",oauth_callback=\"\(callback)\""
-		}
-		if let verifier {
-			authHeader += ",oauth_verifier=\"\(verifier)\""
 		}
 
 		var req: URLRequest = request
