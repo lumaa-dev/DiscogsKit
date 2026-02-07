@@ -277,19 +277,30 @@ public final class Discogs {
 		return String(data: data, encoding: .utf8)
 	}
 
+	public func accessToken(requestToken: String) async throws -> String? {
+		var req: URLRequest = try self.makeRequest(for: Oauths.accessToken)
+		req = self.timedRequest(using: req)
+
+		let data: Data = try await self.makeCall(using: req).0
+		return String(data: data, encoding: .utf8)
+	}
+
 	/// Creates a "timed" request (usable with ``Oauths/requestToken`` for example)
 	///
 	/// Example here: [Documentation](https://www.discogs.com/developers#page:authentication,header:authentication-access-token-url)
 	/// - Returns: The "timed" request
-	private func timedRequest(using request: URLRequest, callback: String, verifier: String? = nil) -> URLRequest {
-		var added: String = ""
+	private func timedRequest(using request: URLRequest, callback: String? = nil, verifier: String? = nil) -> URLRequest {
+		var authHeader: String = "OAuth oauth_consumer_key=\"\(self.consumerKey!)\",oauth_nonce=\"\(UUID().uuidString)\",oauth_signature=\"\(self.consumerSecret!)&\",oauth_signature_method=\"PLAINTEXT\",oauth_timestamp=\"\(Int(Date.now.timeIntervalSince1970))\",oauth_version=\"1.0\""
+		if let callback {
+			authHeader += ",oauth_callback=\"\(callback)\""
+		}
 		if let verifier {
-			added = ", oauth_verifier=\"\(verifier)\"" // fuck this comma
+			authHeader += ",oauth_verifier=\"\(verifier)\""
 		}
 
 		var req: URLRequest = request
 		req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-		req.setValue("OAuth oauth_consumer_key=\"\(self.consumerKey!)\",oauth_nonce=\"\(UUID().uuidString)\",oauth_signature=\"\(self.consumerSecret!)&\",oauth_signature_method=\"PLAINTEXT\",oauth_timestamp=\"\(Int(Date.now.timeIntervalSince1970))\",oauth_callback=\"\(callback)\",oauth_version=\"1.0\"\(added)", forHTTPHeaderField: "Authorization")
+		req.setValue(authHeader, forHTTPHeaderField: "Authorization")
 
 		return req
 	}
