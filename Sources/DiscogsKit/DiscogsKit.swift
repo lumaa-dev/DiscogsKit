@@ -306,7 +306,6 @@ public final class Discogs {
 		if var auth: String = req.value(forHTTPHeaderField: "Authorization") {
 			auth += ",oauth_token=\"\(oauthToken)\",oauth_verifier=\"\(verifierToken)\",oauth_signature=\"\(self.consumerSecret!)&\(secretToken)\""
 			req.setValue(auth, forHTTPHeaderField: "Authorization")
-			print("New auth: \(auth)")
 		}
 
 		self.secretToken = nil
