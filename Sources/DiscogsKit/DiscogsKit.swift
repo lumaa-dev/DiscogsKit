@@ -16,9 +16,14 @@ public final class Discogs {
         "\(self.name)/\(self.version) +\(self.about.absoluteString)"
     }
 
-    public var consumerKey: String? = nil
-    public var consumerSecret: String? = nil
-	public var token: String? = nil // user token
+    private(set) public var consumerKey: String? = nil
+	private(set) public var consumerSecret: String? = nil
+
+	public var oauthToken: String? = nil
+	public var oauthSecretToken: String? = nil
+
+	/// Also called "user token"
+	private(set) public var token: String? = nil // user token
 
 	private var secretToken: String? = nil
 
@@ -215,7 +220,10 @@ public final class Discogs {
 		guard var apiURL: URL = URL(string: "https://api.discogs.com\(endpoint.path)") else { throw DiscogsError.badURL }
 		apiURL.append(queryItems: endpoint.queries)
 
-		let auth: String = self.token != nil ? "Discogs token=\(self.token!)" : "Discogs key=\(self.consumerKey!), secret=\(self.consumerSecret!)"
+		var auth: String = self.token != nil ? "Discogs token=\(self.token!)" : "Discogs key=\(self.consumerKey!),secret=\(self.consumerSecret!)"
+		if let oauthToken, let oauthSecretToken {
+			auth = "OAuth oauth_consumer_key=\"\(self.consumerKey!)\",oauth_token=\"\(oauthToken)\",oauth_signature_method=\"PLAINTEXT\",oauth_signature=\"\(self.consumerSecret!)}&\(oauthSecretToken)\",oauth_timestamp=\"\(Int(Date.now.timeIntervalSince1970))\",oauth_nonce=\"\(UUID().uuidString)\",oauth_token_secret=\"\(oauthSecretToken)\",oauth_version=\"1.0\""
+		}
 
 		var req: URLRequest = .init(url: apiURL)
 		req.httpMethod = method.rawValue
@@ -297,6 +305,8 @@ public final class Discogs {
 			req.setValue(auth, forHTTPHeaderField: "Authorization")
 			print("New auth: \(auth)")
 		}
+
+		self.secretToken = nil
 
 		let data: Data = try await self.makeCall(using: req).0
 		return String(data: data, encoding: .utf8)
