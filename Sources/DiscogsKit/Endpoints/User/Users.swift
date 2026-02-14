@@ -177,7 +177,11 @@ public enum Users: DiscogsEndpoint {
                 return []
         }
     }
+
+	/// API endpoints that uses the `/users/{username}/collections` path.
+	typealias Collections = UserCollections
 }
+
 
 // MARK: - Additional
 public enum ContributionsSort: String, CaseIterable {
