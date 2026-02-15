@@ -62,6 +62,43 @@ func identity() async throws {
 	#expect(!data.isEmpty)
 }
 
+@Test
+func setNote() async throws {
+	guard let plist: [String: String] = readSecret(), let okey: String = plist["oauthToken"], let osecret = plist["oauthTokenSecret"], let key: String = plist["consumerKey"], let secret = plist["consumerSecret"] else { fatalError("Found nil instead of Secret.plist data") }
+
+	let app: Discogs = .init(name: "DiscogsKitTests", version: "1.0.0", consumerKey: key, consumerSecret: secret)
+	app.oauthToken = okey
+	app.oauthSecretToken = osecret
+
+	// Second-to-last release in collection
+	let collectionRelease: Data = try await app.send(
+		for: Users.Collections.releases(username: "nthnos", id: 0, page: 2, perPage: 1, sort: .added, order: .ascending),
+		using: .get
+	).0
+
+	if let json = try JSONSerialization.jsonObject(with: collectionRelease) as? [String: Any] {
+		let release: [String: Any]? = (json["releases"] as? [[String: Any]])?[0]
+		if let release, let instanceId: UInt = release["instance_id"] as? UInt, let releaseId: UInt = release["id"] as? UInt {
+			let res: HTTPURLResponse = try await app.send(
+				for: Users.Collections
+					.editFields(
+						username: "nthnos",
+						value: "From DiscogsKit",
+						folderId: 0,
+						releaseId: releaseId,
+						instanceId: instanceId,
+						fieldId: 3
+					),
+				using: .post
+			).1
+
+			return #expect(res.statusCode == 204)
+		}
+	}
+
+	throw DiscogsError.badResponse
+}
+
 private func readSecret() -> [String: String]? {
 	if let path = Bundle.module.path(forResource: "Secret", ofType: "plist") {
 		let url = URL(fileURLWithPath: path)
