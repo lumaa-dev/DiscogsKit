@@ -4,7 +4,6 @@ import Foundation
 
 /// Represents any endpoint towards the [Discogs API](https://www.discogs.com/developers).
 public protocol DiscogsEndpoint {
-	associatedtype Body = Encodable
 
 	/// API Path for this endpoint.
 	///
@@ -18,7 +17,7 @@ public protocol DiscogsEndpoint {
 	var queries: [URLQueryItem] { get }
 
 	/// Request body for this endpoint.
-	var body: Body? { get }
+	var body: AnyEncodable? { get }
 
 	/// API URL for this endpoint.
 	var url: URL? { get }
@@ -26,7 +25,7 @@ public protocol DiscogsEndpoint {
 
 public extension DiscogsEndpoint {
 	var queries: [URLQueryItem] { return [] }
-	var body: (any Encodable)? { return nil }
+	var body: AnyEncodable? { return nil }
 
 	var url: URL? {
 		guard var url: URL = URL(string: "https://api.discogs.com\(self.path)") else { return nil }

@@ -65,10 +65,10 @@ public enum Releases: DiscogsEndpoint {
 		}
 	}
 
-	public var body: (any Encodable)? {
+	public var body: AnyEncodable? {
 		switch self {
 			case .setRating(_, _, let rating):
-				return ReleaseSetRating(rating: rating)
+				return .init(ReleaseSetRating(rating: rating))
 			default:
 				return nil
 		}

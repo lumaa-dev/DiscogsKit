@@ -190,21 +190,19 @@ public enum UserCollections: DiscogsEndpoint {
 					.init(name: "sort", value: sort?.rawValue),
 					order.query
 				]
-			case .editFields(_, let value, _, _, _, _):
-				return [
-					.init(name: "value", value: value)
-				]
 			default:
 				return []
 		}
 	}
 
-	public var body: (any Encodable)? {
+	public var body: AnyEncodable? {
 		switch self {
 			case .createFolder(_, let name):
-				return NewFolderBody(name: name)
+				return .init(NewFolderBody(name: name))
 			case .rateRelease(_, _, _, _, let rating):
-				return RatingBody(rating: rating)
+				return .init(RatingBody(rating: rating))
+			case .editFields(_, let value, _, _, _, _):
+				return .init(EditFieldsBody(value: value))
 			default:
 				return nil
 		}
@@ -222,6 +220,23 @@ public enum ReleasesSort: String, CaseIterable {
 	case rating = "rating"
 	case added = "added"
 	case year = "year"
+}
+
+private struct EditFieldsBody: Encodable {
+	let value: String
+
+	init(value: String) {
+		self.value = value
+	}
+
+	func encode(to encoder: any Encoder) throws {
+		var container = encoder.container(keyedBy: Self.CodingKeys.self)
+		try container.encode(self.value, forKey: .value)
+	}
+
+	enum CodingKeys: CodingKey {
+		case value
+	}
 }
 
 private struct NewFolderBody: Encodable {

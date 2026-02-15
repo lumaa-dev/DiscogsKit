@@ -74,7 +74,7 @@ public final class Discogs {
     public func post<Response: Decodable>(for endpoint: any DiscogsEndpoint) async throws -> Response? {
         guard endpoint.methods.contains(Discogs.HTTPMethod.post) else { throw DiscogsError.badMethod }
 
-        let data: Data = try await self.send(for: endpoint.path, using: .post, body: endpoint.body ?? EmptyBody()).0
+        let data: Data = try await self.send(for: endpoint.path, using: .post, body: endpoint.body).0
         let decoder: JSONDecoder = JSONDecoder()
         return try? decoder.decode(Response.self, from: data)
     }
@@ -89,7 +89,7 @@ public final class Discogs {
 	public func post(for endpoint: any DiscogsEndpoint) async throws {
 		guard endpoint.methods.contains(Discogs.HTTPMethod.post) else { throw DiscogsError.badMethod }
 
-		_ = try await self.send(for: endpoint.path, using: .post, body: endpoint.body ?? EmptyBody())
+		_ = try await self.send(for: endpoint.path, using: .post, body: endpoint.body)
 		return
 	}
 
@@ -104,7 +104,7 @@ public final class Discogs {
     public func put<Response: Decodable>(for endpoint: any DiscogsEndpoint) async throws -> Response? {
         guard endpoint.methods.contains(Discogs.HTTPMethod.put) else { throw DiscogsError.badMethod }
 
-        let data: Data = try await self.send(for: endpoint.path, using: .put, body: endpoint.body ?? EmptyBody()).0
+        let data: Data = try await self.send(for: endpoint.path, using: .put, body: endpoint.body).0
         let decoder: JSONDecoder = JSONDecoder()
         return try? decoder.decode(Response.self, from: data)
     }
@@ -119,7 +119,7 @@ public final class Discogs {
 	public func put(for endpoint: any DiscogsEndpoint) async throws {
 		guard endpoint.methods.contains(Discogs.HTTPMethod.put) else { throw DiscogsError.badMethod }
 
-		_ = try await self.send(for: endpoint.path, using: .put, body: endpoint.body ?? EmptyBody())
+		_ = try await self.send(for: endpoint.path, using: .put, body: endpoint.body)
 		return
 	}
 
@@ -157,7 +157,7 @@ public final class Discogs {
     /// - Throws: ``DiscogsError/badURL`` if the URL is malformed or incorrect.
     /// - Throws: ``DiscogsError/badResponse`` if the URL response is malformed, incorrect, or returned an error.
     /// - Returns: Returns the response's data and HTTP response.
-    public func send(for path: String = "/", using method: Discogs.HTTPMethod = .get, queries: [URLQueryItem] = [], body: any Encodable = EmptyBody()) async throws -> (Data, HTTPURLResponse) {
+    public func send(for path: String = "/", using method: Discogs.HTTPMethod = .get, queries: [URLQueryItem] = [], body: AnyEncodable? = nil) async throws -> (Data, HTTPURLResponse) {
         let req: URLRequest = try self.makeRequest(for: path, using: method, queries: queries, body: body)
 		return try await self.makeCall(using: req)
     }
@@ -172,8 +172,12 @@ public final class Discogs {
 	public func send(for endpoint: any DiscogsEndpoint, using method: Discogs.HTTPMethod = .get) async throws -> (Data, HTTPURLResponse) {
 		guard endpoint.methods.contains(method) else { throw DiscogsError.badMethod }
 
-		let body: Encodable = endpoint.body ?? EmptyBody()
-		let req: URLRequest = try self.makeRequest(for: endpoint.path, using: method, queries: endpoint.queries, body: body)
+		let req: URLRequest = try self.makeRequest(
+			for: endpoint.path,
+			using: method,
+			queries: endpoint.queries,
+			body: endpoint.body
+		)
 
 		return try await self.makeCall(using: req)
 	}
@@ -186,7 +190,7 @@ public final class Discogs {
     ///   - body: The data to send along with the `POST` or `PUT` method.
     /// - Throws: ``DiscogsError/badURL`` if the URL is malformed or incorrect.
     /// - Returns: An all-ready to use `URLRequest`.
-    public func makeRequest<Body: Encodable>(for path: String = "/", using method: Discogs.HTTPMethod = .get, queries: [URLQueryItem] = [], body: Body = EmptyBody()) throws -> URLRequest {
+    public func makeRequest(for path: String = "/", using method: Discogs.HTTPMethod = .get, queries: [URLQueryItem] = [], body: AnyEncodable? = nil) throws -> URLRequest {
         guard var apiURL: URL = URL(string: "https://api.discogs.com\(path)") else { throw DiscogsError.badURL }
 
 		let filtered = queries.filter { $0.value != nil }
@@ -217,7 +221,6 @@ public final class Discogs {
 	/// - Parameters:
 	///   - path: The API path.
 	///   - method: The HTTP method to use.
-	///   - body: The data to send along with the `POST` or `PUT` method.
 	/// - Throws: ``DiscogsError/badURL`` if the URL is malformed or incorrect.
 	/// - Returns: An all-ready to use `URLRequest`.
 	public func makeRequest(for endpoint: any DiscogsEndpoint, using method: Discogs.HTTPMethod = .get) throws -> URLRequest {
@@ -236,7 +239,7 @@ public final class Discogs {
 		req.setValue(self.userAgent, forHTTPHeaderField: "User-Agent")
 		req.setValue(auth, forHTTPHeaderField: "Authorization")
 
-		if method.hasBody, let body: Encodable = endpoint.body {
+		if let body = endpoint.body, method.hasBody {
 			let encoder: JSONEncoder = JSONEncoder()
 			let bodyData: Data = try encoder.encode(body)
 			req.httpBody = bodyData
@@ -353,11 +356,6 @@ public final class Discogs {
                     return true
             }
         }
-    }
-
-    /// An empty `Encodable` struct to use as an empty `Body` in ``Discogs#makeRequest(for:using:queries:body:)``.
-    public struct EmptyBody: Encodable {
-        public init () {}
     }
 }
 
